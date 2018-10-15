@@ -10,19 +10,21 @@
    StreamsConfig/DEFAULT_VALUE_SERDE_CLASS_CONFIG (class (Serdes/String))})
 
 (defn stream
-  []
+  [{:keys [in out xform]}]
   (let [builder (StreamsBuilder.)
         _ (.. builder
-              (stream ["my-input-topic"])
-              (mapValues (reify ValueMapper
-                           (apply [this v]
-                             ((comp str count) v))))
-              (to "my-output-topic"))]
+              (stream in)
+              (mapValues xform)
+              (to out))]
     (.start (KafkaStreams. (.build builder)
                            (StreamsConfig. config)))))
 
 (defn -main [& args]
   (prn "starting")
-  (stream)
+  (stream {:in ["my-input-topic"]
+           :out "my-output-topic"
+           :xform (reify ValueMapper
+                    (apply [this v]
+                      ((comp str count) v)))})
   (Thread/sleep (* 60000 10))
   (prn "stopping"))
